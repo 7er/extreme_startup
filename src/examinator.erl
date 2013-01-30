@@ -9,7 +9,7 @@ results(Pid) ->
     receive
         {Pid, Results} ->
             Results
-    end.
+    end. 
 
 init(State, Qid) ->
     loop(State, Qid, []).
@@ -19,9 +19,8 @@ loop({Name, Url}, Qid, Results) ->
     {ok, RequestId} = httpc:request(get, {generate_question_url(Url, Question, Qid), []}, [], [{sync, false}]),
     receive
         {http, {RequestId, Response}} ->
-            Answer = check_response(Response),
-            Grade = check_answer(CorrectAnswer, Answer),  		
-            leaderboard:update(Name, Grade),
+            Grade = grade_response(Response, CorrectAnswer),
+            ok = leaderboard:update(Name, Grade),
             loop({Name, Url}, Qid+1, [{Qid, Grade, Response}|Results]);
         {From, results} ->
             From ! {self(), Results},
@@ -32,12 +31,14 @@ next_question() ->
     {"Hvor lang er bananen?", "veldig lang"}.
 
 generate_question_url(Base, Question, Id) ->
-    lists:flatten(io_lib:format("~s?q=~s&qid=~s", [Base, Question, Id])).
+    lists:flatten(io_lib:format("~s?q=~s&qid=~p", [Base, Question, Id])).
 
-check_response({ok, {{_, 200, _}, _, Answer}}) ->
-    Answer.
+grade_response({ok, {{_, 200, _}, _, Answer}}, CorrectAnswer) ->
+    grade_answer(CorrectAnswer, Answer);
+grade_response(_, _) ->
+    -1.
 
-check_answer(Answer, Answer) ->
+grade_answer(Answer, Answer) ->
     1;
-check_answer(_, _) ->
+grade_answer(_, _) ->
     0.
