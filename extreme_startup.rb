@@ -30,6 +30,8 @@ class ExtremeStartup
       ($1.to_i + $2.to_i).to_s
     when /vil-du/
       "ja"
+    when /Hvor lang er bananen/
+      "veldig lang"
     end
   end
 end

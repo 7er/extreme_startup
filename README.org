@@ -1,3 +1,7 @@
+* Starting the system
+  start erl in the current directory. There is a .erlang file there that
+  sets up your erlang node with all the applications it needs and other stuff. See .erlang
+
 * next actions
 *** use sasl
 *** easier code reloading

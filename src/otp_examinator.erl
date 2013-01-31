@@ -4,14 +4,14 @@
 %%% @doc
 %%%
 %%% @end
-%%% Created : 23 Jan 2013 by 7er <>
+%%% Created : 31 Jan 2013 by 7er <>
 %%%-------------------------------------------------------------------
--module(player_registry).
+-module(otp_examinator).
 
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, register/2]).
+-export([start_link/2, results/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -19,7 +19,6 @@
 
 -define(SERVER, ?MODULE). 
 
--record(state, {}).
 
 %%%===================================================================
 %%% API
@@ -32,11 +31,11 @@
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+start_link(Name, Url) ->
+    gen_server:start_link(?MODULE, [], [{{Name, Url}, 0}]).
 
-register(Name, Url) ->
-    gen_server:call(?SERVER, {register, Name, Url}).
+results(Pid) ->
+    gen_server:call(Pid, results).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -53,9 +52,8 @@ register(Name, Url) ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([]) ->
-    io:format("~p starting~n" ,[?MODULE]),
-    {ok, #state{}}.
+init({State, Qid}) ->
+    {ok, {State, Qid, []}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -71,9 +69,8 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({register, Name, Url}, _From, State) ->
-    ExaminatorPid = examinator:start_link(Name, Url),
-    {reply, ok, [{Name, ExaminatorPid}|State]}.
+handle_call(results, _From, {_, _, Results}=State) ->
+    {reply, {ok, Results}, State}.
 
 %%--------------------------------------------------------------------
 %% @private

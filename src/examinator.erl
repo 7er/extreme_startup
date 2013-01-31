@@ -1,8 +1,8 @@
 -module(examinator).
--export([start/2, init/2, results/1]).
+-export([start_link/2, init/2, results/1]).
 
-start(Name, Url) ->
-    spawn(examinator, init, [{Name, Url}, 0]).
+start_link(Name, Url) ->
+    spawn_link(examinator, init, [{Name, Url}, 0]).
 
 results(Pid) ->
     Pid ! {self(), results},
@@ -14,13 +14,22 @@ results(Pid) ->
 init(State, Qid) ->
     loop(State, Qid, []).
 
+
+sleep(Millis) ->
+    receive 
+    after Millis ->
+            ok
+    end.
+
 loop({Name, Url}, Qid, Results) ->
     {Question, CorrectAnswer} = next_question(),
     {ok, RequestId} = httpc:request(get, {generate_question_url(Url, Question, Qid), []}, [], [{sync, false}]),
     receive
         {http, {RequestId, Response}} ->
+            io:format("Got response ~n~p~n", [Response]),
             Grade = grade_response(Response, CorrectAnswer),
             ok = leaderboard:update(Name, Grade),
+            sleep(3000),
             loop({Name, Url}, Qid+1, [{Qid, Grade, Response}|Results]);
         {From, results} ->
             From ! {self(), Results},
@@ -31,7 +40,7 @@ next_question() ->
     {"Hvor lang er bananen?", "veldig lang"}.
 
 generate_question_url(Base, Question, Id) ->
-    lists:flatten(io_lib:format("~s?q=~s&qid=~p", [Base, Question, Id])).
+    lists:flatten(io_lib:format("~s?q=~s&qid=~p", [Base, edoc_lib:escape_uri(Question), Id])).
 
 grade_response({ok, {{_, 200, _}, _, Answer}}, CorrectAnswer) ->
     grade_answer(CorrectAnswer, Answer);
