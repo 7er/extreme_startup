@@ -1,6 +1,10 @@
 * Starting the system
-  start erl in the current directory. There is a .erlang file there that
-  sets up your erlang node with all the applications it needs and other stuff. See .erlang
+  run the start.sh script in the current directory
+  it sets up your erlang node with all the applications it needs and other stuff. See .erlang
+
+*** windows users
+    Port start.sh to a .bat file or similar
+
 
 * next actions
 *** use sasl
