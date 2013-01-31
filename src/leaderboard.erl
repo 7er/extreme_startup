@@ -11,7 +11,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, update/2]).
+-export([start_link/0, update/2, list/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -36,6 +36,9 @@ start_link() ->
 
 update(Name, Grade) ->
     gen_server:call(?SERVER, {update, {Name, Grade}}).
+
+list() ->
+    gen_server:call(?SERVER, list).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -71,9 +74,10 @@ init([]) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call({update, {Name, Grade}}, _From, State) ->
-    NewState = dict:update(Name, fun(Old) -> Grade + Old end, 0, State),
-    {reply, ok, NewState}.
-
+    NewState = dict:update(Name, fun(Old) -> Grade + Old end, Grade, State),
+    {reply, ok, NewState};
+handle_call(list, _From, State) ->
+    {reply, {ok, dict:to_list(State)}, State}.
 %%--------------------------------------------------------------------
 %% @private
 %% @doc

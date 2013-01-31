@@ -42,7 +42,8 @@ next_question() ->
 generate_question_url(Base, Question, Id) ->
     lists:flatten(io_lib:format("~s?q=~s&qid=~p", [Base, edoc_lib:escape_uri(Question), Id])).
 
-grade_response({ok, {{_, 200, _}, _, Answer}}, CorrectAnswer) ->
+grade_response({{_, 200, _}, _, BinaryAnswer}, CorrectAnswer) ->
+    Answer = binary_to_list(BinaryAnswer),    
     grade_answer(CorrectAnswer, Answer);
 grade_response(_, _) ->
     -1.
