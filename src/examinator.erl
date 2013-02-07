@@ -1,8 +1,10 @@
 -module(examinator).
--export([start_link/2, init/2, results/1]).
+-export([start_link/2, start_link/3, init/3, results/1]).
 
 start_link(Name, Url) ->
-    spawn_link(examinator, init, [{Name, Url}, 0]).
+    spawn_link(examinator, init, [{Name, Url}, 0, fun query_player/3]).
+start_link(Name, Url, QueryFunction) ->
+    spawn_link(examinator, init, [{Name, Url}, 0, QueryFunction]).
 
 results(Pid) ->
     Pid ! {self(), results},
@@ -11,29 +13,49 @@ results(Pid) ->
             Results
     end. 
 
-init(State, Qid) ->
-    loop(State, Qid, []).
-
+init(State, Qid, QueryFunction) ->
+    self() ! ask_new_question,
+    loop(State, Qid, [], QueryFunction).
 
 sleep(Millis) ->
     receive 
-    after Millis ->
+        after Millis ->
             ok
     end.
 
-loop({Name, Url}, Qid, Results) ->
-    {Question, CorrectAnswer} = next_question(),
+loop({Name, Url}, Qid, Results, QueryFunction) ->
+    receive
+        ask_new_question ->
+            {Question, CorrectAnswer} = next_question(),
+            SelfPid = self(),
+            spawn(fun () -> 
+                    Response = QueryFunction(Url, Question, SelfPid),
+                    io:format("Got response ~n~p~n", [Response]),
+                    Grade = grade_response(Response, CorrectAnswer),
+                    ok = leaderboard:update(Name, Grade),
+                    SelfPid ! {question_result, Qid, Grade, Response}
+                end),
+            loop({Name, Url}, Qid, Results, QueryFunction);
+        {question_result, Qid, Grade, Response} ->
+            ask_new_question_later(),
+            loop({Name, Url}, Qid+1, [{Qid, Grade, Response}|Results], QueryFunction);
+        {From, results} ->
+            From ! {self(), Results},
+            loop({Name, Url}, Qid, Results, QueryFunction)
+    end.
+
+ask_new_question_later() ->
+    SelfPid = self(),
+    spawn(fun () ->
+            sleep(3000),
+            SelfPid ! ask_new_question
+        end).
+
+query_player(Url, Question, Qid) ->
     {ok, RequestId} = httpc:request(get, {generate_question_url(Url, Question, Qid), []}, [], [{sync, false}]),
     receive
         {http, {RequestId, Response}} ->
-            io:format("Got response ~n~p~n", [Response]),
-            Grade = grade_response(Response, CorrectAnswer),
-            ok = leaderboard:update(Name, Grade),
-            sleep(3000),
-            loop({Name, Url}, Qid+1, [{Qid, Grade, Response}|Results]);
-        {From, results} ->
-            From ! {self(), Results},
-            loop({Name, Url}, Qid, Results)
+            Response
     end.
 
 next_question() ->
