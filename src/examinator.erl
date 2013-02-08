@@ -19,7 +19,7 @@ init(State, Qid, QueryFunction) ->
 
 sleep(Millis) ->
     receive 
-        after Millis ->
+            after Millis ->
             ok
     end.
 
