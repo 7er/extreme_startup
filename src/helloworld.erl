@@ -28,10 +28,12 @@ helloworld_body()->
 
 
 leaderboard_body() ->
-    io:format("leaderboard:~p~n", [leaderboard:list()]),
+    %io:format("leaderboard:~p~n", [leaderboard:list()]),
     %"<BODY>Hello World</BODY>".
     {ok, List} = leaderboard:list(),
-    create_html_list(List).
+    ["<ul>\n",
+	create_html_list(List),
+	"</ul>\n"].
 
 
 html_end()->
@@ -39,4 +41,7 @@ html_end()->
 
 
 create_html_list(List) ->
-    lists:flatten(io_lib:format("~p~n", [List])).
+	lists:flatmap(fun format_tupple/1, List).
+	
+format_tupple({First,Last}) ->
+	io_lib:format("<li>NAME:~p Score:~p</li>~n", [First,Last]).
