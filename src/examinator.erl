@@ -29,7 +29,7 @@ loop({Name, Url}, Qid, Results, QueryFunction) ->
             {Question, CorrectAnswer} = next_question(),
             SelfPid = self(),
             spawn(fun () -> 
-                    Response = QueryFunction(Url, Question, SelfPid),
+                    Response = QueryFunction(Url, Question, Qid),
                     io:format("Got response ~n~p~n", [Response]),
                     Grade = grade_response(Response, CorrectAnswer),
                     ok = leaderboard:update(Name, Grade),
